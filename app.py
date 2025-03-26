@@ -1,29 +1,26 @@
 from flask import Flask, render_template, request
-import joblib
-import pandas as pd
+import pickle
+import numpy as np
 
 app = Flask(__name__)
 
 # Load the trained model
-model = joblib.load('model.pkl')
+with open("model.pkl", "rb") as model_file:
+    model = pickle.load(model_file)
 
-@app.route('/')
-def home():
-    return render_template('input.html')
+# Home route (Input Form)
+@app.route("/", methods=["GET", "POST"])
+def index():
+    if request.method == "POST":
+        try:
+            experience = float(request.form["experience"])  # Get user input
+            prediction = model.predict(np.array([[experience]]))  # Make prediction
+            predicted_salary = round(prediction[0], 2)  # Round to 2 decimal places
+            return render_template("output.html", experience=experience, salary=predicted_salary)
+        except ValueError:
+            return "Invalid input! Please enter a numeric value."
+    
+    return render_template("input.html")
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    # Get form data
-    features = [float(x) for x in request.form.values()]
-    
-    # Convert to DataFrame with correct feature names
-    feature_names = ['feature1', 'feature2', 'feature3']  # Replace with your actual feature names
-    df = pd.DataFrame([features], columns=feature_names)
-    
-    # Make prediction
-    prediction = model.predict(df)
-    
-    return render_template('output.html', prediction=prediction[0])
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)
